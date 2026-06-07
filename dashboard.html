@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel de Risco de Inadimplência</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f9;
+      color: #1a1d23;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1d23;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    header span { font-size: 0.8rem; color: #8a909e; margin-left: auto; }
+
+    /* ── Layout ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── Summary cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px 24px;
+      border-left: 4px solid transparent;
+    }
+    .card.total { border-color: #6c7ae0; }
+    .card.alto  { border-color: #e05c5c; }
+    .card.baixo { border-color: #3dbf82; }
+    .card-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; color: #8a909e; margin-bottom: 6px; }
+    .card-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .card.total .card-value { color: #6c7ae0; }
+    .card.alto  .card-value { color: #e05c5c; }
+    .card.baixo .card-value { color: #3dbf82; }
+
+    /* ── Section title row ── */
+    .section-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #8a909e;
+    }
+    .result-count {
+      font-size: 0.8rem;
+      color: #8a909e;
+    }
+    .result-count strong { color: #1a1d23; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: #fff;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f8f9fc; }
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #8a909e;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 14px 16px;
+      font-size: 0.875rem;
+      border-top: 1px solid #f0f2f5;
+      vertical-align: middle;
+    }
+    tr:hover td { background: #fafbfd; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.alto  { background: #fdeaea; color: #c0392b; }
+    .badge.baixo { background: #e6f9f2; color: #1e8449; }
+
+    .prob-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .prob-bar {
+      flex: 1;
+      height: 6px;
+      background: #f0f2f5;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .prob-bar-fill { height: 100%; border-radius: 3px; }
+    .prob-val { font-weight: 600; font-size: 0.8rem; width: 40px; text-align: right; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 8px; }
+    .filter-group-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #8a909e;
+      font-weight: 600;
+    }
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid #e2e5ec;
+      background: #fff;
+      color: #5a6070;
+      transition: all .15s;
+      user-select: none;
+    }
+    .chip:hover { border-color: #b0b8cc; color: #1a1d23; }
+    .chip.active {
+      background: #1a1d23;
+      border-color: #1a1d23;
+      color: #fff;
+    }
+    .chip.active.risco-alto  { background: #e05c5c; border-color: #e05c5c; }
+    .chip.active.risco-baixo { background: #3dbf82; border-color: #3dbf82; }
+    .chip.active.plano-basico  { background: #6c7ae0; border-color: #6c7ae0; }
+    .chip.active.plano-padrao  { background: #e09f3c; border-color: #e09f3c; }
+    .chip.active.plano-premium { background: #9b59b6; border-color: #9b59b6; }
+
+    .btn-reset {
+      margin-left: auto;
+      align-self: flex-end;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid #e2e5ec;
+      background: #fff;
+      color: #8a909e;
+      transition: all .15s;
+    }
+    .btn-reset:hover { border-color: #b0b8cc; color: #1a1d23; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 48px 24px;
+      color: #8a909e;
+      font-size: 0.9rem;
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: .4; }
+
+    /* ── Detail cards ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 16px;
+    }
+    .detail-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      border-top: 3px solid transparent;
+      transition: opacity .2s, transform .2s;
+    }
+    .detail-card.hidden { display: none; }
+    .detail-card.alto  { border-color: #e05c5c; }
+    .detail-card.baixo { border-color: #3dbf82; }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .detail-name { font-weight: 600; font-size: 0.95rem; }
+    .detail-id   { font-size: 0.7rem; color: #8a909e; margin-top: 2px; font-family: monospace; }
+    .detail-plano-badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.68rem;
+      font-weight: 600;
+    }
+    .plano-basico  .detail-plano-badge { background: #eef0fd; color: #4a5ad0; }
+    .plano-padrao  .detail-plano-badge { background: #fef6e7; color: #b8760a; }
+    .plano-premium .detail-plano-badge { background: #f5eefa; color: #7b2fa8; }
+
+    .detail-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .feat { background: #f8f9fc; border-radius: 6px; padding: 8px 10px; }
+    .feat-label { font-size: 0.68rem; color: #8a909e; text-transform: uppercase; letter-spacing: .04em; }
+    .feat-value { font-size: 0.875rem; font-weight: 600; margin-top: 2px; }
+
+    .prob-big {
+      text-align: center;
+      padding: 6px 14px;
+      border-radius: 8px;
+      min-width: 72px;
+      flex-shrink: 0;
+    }
+    .prob-big .num { font-size: 1.4rem; font-weight: 700; line-height: 1; }
+    .prob-big .lbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+    .prob-big.alto  { background: #fdeaea; color: #c0392b; }
+    .prob-big.baixo { background: #e6f9f2; color: #1e8449; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#6c7ae0" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+  </svg>
+  <h1>Painel de Risco de Inadimplência</h1>
+  <span>Gerado em 07/06/2026 — modelo v1 (AUC-ROC 0.9973)</span>
+</header>
+
+<main>
+
+  <!-- Cards de resumo -->
+  <div class="cards">
+    <div class="card total">
+      <div class="card-label">Alunos analisados</div>
+      <div class="card-value">5</div>
+    </div>
+    <div class="card alto">
+      <div class="card-label">Risco Alto</div>
+      <div class="card-value">2</div>
+    </div>
+    <div class="card baixo">
+      <div class="card-label">Risco Baixo</div>
+      <div class="card-value">3</div>
+    </div>
+  </div>
+
+  <!-- Tabela resumida -->
+  <div class="section-row">
+    <p class="section-title">Resumo por aluno</p>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Aluno</th>
+          <th>Idade</th>
+          <th>Plano</th>
+          <th>Tempo (meses)</th>
+          <th>Atrasos</th>
+          <th>Probabilidade</th>
+          <th>Risco</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Filtros -->
+  <div class="section-row">
+    <p class="section-title">Detalhamento por aluno</p>
+    <span class="result-count">Exibindo <strong id="visible-count">5</strong> de 5</span>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-group-label">Risco</span>
+      <div class="filter-chips">
+        <span class="chip risco-alto"  data-filter="risco" data-value="alto">⚠ Alto</span>
+        <span class="chip risco-baixo" data-filter="risco" data-value="baixo">✓ Baixo</span>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-group-label">Plano</span>
+      <div class="filter-chips">
+        <span class="chip plano-basico"  data-filter="plano" data-value="Básico">Básico</span>
+        <span class="chip plano-padrao"  data-filter="plano" data-value="Padrão">Padrão</span>
+        <span class="chip plano-premium" data-filter="plano" data-value="Premium">Premium</span>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-group-label">Faixa de idade</span>
+      <div class="filter-chips">
+        <span class="chip" data-filter="idade" data-value="18-25">18–25</span>
+        <span class="chip" data-filter="idade" data-value="26-35">26–35</span>
+        <span class="chip" data-filter="idade" data-value="36-55">36–55</span>
+      </div>
+    </div>
+
+    <button class="btn-reset" id="btn-reset">Limpar filtros</button>
+  </div>
+
+  <!-- Cards de detalhe -->
+  <div class="detail-grid" id="detail-grid"></div>
+
+</main>
+
+<script>
+  const STUDENTS = [
+    {
+      id: "a3f1c2d4-e5b6-4789-8abc-100000000001",
+      nome: "Carlos", idade: 19, plano: "Premium", preco: 200.0,
+      duracao: 12, tenure: 1, mediaAtraso: 22.0,
+      fatAtrasadas: 3, fatPagas: 1, prob: 0.99, alto: true
+    },
+    {
+      id: "b4e2d3f5-f6c7-4890-9bcd-200000000002",
+      nome: "Fernanda", idade: 45, plano: "Básico", preco: 50.0,
+      duracao: 12, tenure: 36, mediaAtraso: 0.0,
+      fatAtrasadas: 0, fatPagas: 36, prob: 0.00, alto: false
+    },
+    {
+      id: "c5f3e4a6-a7d8-4901-aced-300000000003",
+      nome: "Rafael", idade: 28, plano: "Padrão", preco: 100.0,
+      duracao: 12, tenure: 6, mediaAtraso: 5.0,
+      fatAtrasadas: 1, fatPagas: 5, prob: 0.07, alto: false
+    },
+    {
+      id: "d6a4f5b7-b8e9-4a12-bdef-400000000004",
+      nome: "Julia", idade: 21, plano: "Premium", preco: 200.0,
+      duracao: 12, tenure: 2, mediaAtraso: 38.0,
+      fatAtrasadas: 5, fatPagas: 0, prob: 0.99, alto: true
+    },
+    {
+      id: "e7b5a6c8-c9fa-4b23-aeaf-500000000005",
+      nome: "Marcos", idade: 55, plano: "Básico", preco: 50.0,
+      duracao: 12, tenure: 60, mediaAtraso: 0.0,
+      fatAtrasadas: 0, fatPagas: 60, prob: 0.00, alto: false
+    }
+  ];
+
+  // ── Tabela ──────────────────────────────────────────────────────────────────
+  const tbody = document.getElementById("table-body");
+  STUDENTS.forEach(s => {
+    const cls   = s.alto ? "alto" : "baixo";
+    const pct   = Math.round(s.prob * 100);
+    const color = s.alto ? "#e05c5c" : "#3dbf82";
+    tbody.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td><strong>${s.nome}</strong></td>
+        <td>${s.idade} anos</td>
+        <td>R$ ${s.preco.toFixed(0)} · ${s.plano}</td>
+        <td>${s.tenure} meses</td>
+        <td>${s.fatAtrasadas} fatura${s.fatAtrasadas !== 1 ? "s" : ""}</td>
+        <td>
+          <div class="prob-bar-wrap">
+            <div class="prob-bar">
+              <div class="prob-bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+            <span class="prob-val" style="color:${color}">${pct}%</span>
+          </div>
+        </td>
+        <td><span class="badge ${cls}">${s.alto ? "⚠ Alto" : "✓ Baixo"}</span></td>
+      </tr>
+    `);
+  });
+
+  // ── Detail cards ─────────────────────────────────────────────────────────────
+  const planoSlug = p => p === "Básico" ? "basico" : p === "Padrão" ? "padrao" : "premium";
+  const idadeFaixa = i => i <= 25 ? "18-25" : i <= 35 ? "26-35" : "36-55";
+
+  const grid = document.getElementById("detail-grid");
+  STUDENTS.forEach(s => {
+    const cls  = s.alto ? "alto" : "baixo";
+    const pct  = Math.round(s.prob * 100);
+    const slug = planoSlug(s.plano);
+    const div  = document.createElement("div");
+    div.className = `detail-card ${cls} plano-${slug}`;
+    div.dataset.risco = cls;
+    div.dataset.plano = s.plano;
+    div.dataset.idade = idadeFaixa(s.idade);
+    div.innerHTML = `
+      <div class="detail-header">
+        <div>
+          <div class="detail-name">${s.nome}</div>
+          <div class="detail-id">${s.id}</div>
+          <span class="detail-plano-badge">${s.plano}</span>
+        </div>
+        <div class="prob-big ${cls}">
+          <div class="num">${pct}%</div>
+          <div class="lbl">${s.alto ? "Alto" : "Baixo"}</div>
+        </div>
+      </div>
+      <div class="detail-features">
+        <div class="feat"><div class="feat-label">Idade</div><div class="feat-value">${s.idade} anos</div></div>
+        <div class="feat"><div class="feat-label">Plano</div><div class="feat-value">R$ ${s.preco.toFixed(0)} / mês</div></div>
+        <div class="feat"><div class="feat-label">Tempo de matrícula</div><div class="feat-value">${s.tenure} meses</div></div>
+        <div class="feat"><div class="feat-label">Duração do plano</div><div class="feat-value">${s.duracao} meses</div></div>
+        <div class="feat"><div class="feat-label">Média de atraso</div><div class="feat-value">${s.mediaAtraso.toFixed(1)} dias</div></div>
+        <div class="feat"><div class="feat-label">Faturas atrasadas</div><div class="feat-value">${s.fatAtrasadas}</div></div>
+        <div class="feat"><div class="feat-label">Faturas pagas</div><div class="feat-value">${s.fatPagas}</div></div>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+
+  // ── Filtro ───────────────────────────────────────────────────────────────────
+  // active = { risco: Set, plano: Set, idade: Set }
+  const active = { risco: new Set(), plano: new Set(), idade: new Set() };
+
+  function applyFilters() {
+    const cards = grid.querySelectorAll(".detail-card");
+    let visible = 0;
+    cards.forEach(card => {
+      const matchRisco = active.risco.size === 0 || active.risco.has(card.dataset.risco);
+      const matchPlano = active.plano.size === 0 || active.plano.has(card.dataset.plano);
+      const matchIdade = active.idade.size === 0 || active.idade.has(card.dataset.idade);
+      const show = matchRisco && matchPlano && matchIdade;
+      card.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+
+    document.getElementById("visible-count").textContent = visible;
+
+    // Empty state
+    let empty = grid.querySelector(".empty-state");
+    if (visible === 0) {
+      if (!empty) {
+        empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.innerHTML = `
+          <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <div>Nenhum aluno corresponde aos filtros selecionados.</div>
+        `;
+        grid.appendChild(empty);
+      }
+    } else if (empty) {
+      empty.remove();
+    }
+  }
+
+  document.querySelectorAll(".chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const { filter, value } = chip.dataset;
+      const set = active[filter];
+      if (set.has(value)) {
+        set.delete(value);
+        chip.classList.remove("active");
+      } else {
+        set.add(value);
+        chip.classList.add("active");
+      }
+      applyFilters();
+    });
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    active.risco.clear();
+    active.plano.clear();
+    active.idade.clear();
+    document.querySelectorAll(".chip.active").forEach(c => c.classList.remove("active"));
+    applyFilters();
+  });
+</script>
+
+</body>
+</html>

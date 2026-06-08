@@ -17,20 +17,14 @@ ml-service/
 │       ├── plans.csv
 │       ├── enrollments.csv
 │       └── payments.csv
-├── docs/
-│   ├── ML_SERVICE_SPEC.md # Contrato completo da API (request/response)
-│   ├── banco-de-dados.md  # Schema do banco de dados relacional
-│   └── fluxo.md           # Fluxo de comunicação Frontend → Java → Python
 ├── models/
 │   └── default_risk_model.pkl  # Pipeline scikit-learn serializado (gerado localmente)
 ├── scripts/
 │   ├── generate_data.py   # Gera dataset sintético em data/mock/
+│   ├── test_request.py    # Script interno para testes na requisição
 │   └── train_model.py     # Treina o modelo e salva em models/
-├── tests/
-│   └── test_predict.py    # Testes do endpoint /predict
-├── tools/
-│   └── rtp.ps1            # Script PowerShell para executar scripts Python
 ├── main.py                # Entrypoint FastAPI com carregamento do modelo
+├── README.md 	         
 ├── requirements.txt
 └── .gitignore
 ```
